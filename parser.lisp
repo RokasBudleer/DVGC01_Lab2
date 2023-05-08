@@ -89,35 +89,35 @@
 ;;=====================================================================
 
 (defun map-lexeme (lexeme)
-(format t "Symbol: ~S ~%" lexeme)
+(format t "~%Symbol: ~S " lexeme)
    (list (cond
     ;; keywordtab ===================================
-         ((string=  lexeme "program")   'PROGRAM    )
-         ((string=  lexeme "input"  )   'INPUT      )
-         ((string=  lexeme "output" )   'OUTPUT     )
-         ((string=  lexeme "var"    )   'VAR        )
-         ((string=  lexeme "begin"  )   'BEGIN      )
-         ((string=  lexeme "end"    )   'END        )
-         ((string=  lexeme "boolean")   'BOOLEAN    )
-         ((string=  lexeme "integer")   'INTEGER    )
-         ((string=  lexeme "real"   )   'REAL       )
+        ((string=  lexeme "program")   'PROGRAM    )
+        ((string=  lexeme "input"  )   'INPUT      )
+        ((string=  lexeme "output" )   'OUTPUT     )
+        ((string=  lexeme "var"    )   'VAR        )
+        ((string=  lexeme "begin"  )   'BEGIN      )
+        ((string=  lexeme "end"    )   'END        )
+        ((string=  lexeme "boolean")   'BOOLEAN    )
+        ((string=  lexeme "integer")   'INTEGER    )
+        ((string=  lexeme "real"   )   'REAL       )
     ;; tokentab =====================================
-         ((string=  lexeme ":=")        'ASSIGN     )
-         ((string=  lexeme ")")         'RP         )
-         ((string=  lexeme "(")         'LP         )
-         ((string=  lexeme "*")         'AST        )
-         ((string=  lexeme "+")         'PLUS       )
-         ((string=  lexeme ",")         'COMMA      )
-         ((string=  lexeme "-")         'MINUS      )
-         ((string=  lexeme ".")         'PUNCT      )
-         ((string=  lexeme "/")         'FWDSLASH   )
-         ((string=  lexeme ":")         'COLON      )
-         ((string=  lexeme ";")         'SEMICOLON  )
-         ((string=  lexeme "=")         'EQUAL      )
-         ((string=  lexeme "" )	        'EOF        )
-         ((is-id    lexeme    )         'ID         )
-         ((is-number lexeme   )         'NUM        )
-         (t                             'UNKNOWN )
+        ((string=  lexeme ":=")        'ASSIGN     )
+        ((string=  lexeme ")")         'RP         )
+        ((string=  lexeme "(")         'LP         )
+        ((string=  lexeme "*")         'ASTERIX    )
+        ((string=  lexeme "+")         'PLUS       )
+        ((string=  lexeme ",")         'COMMA      )
+        ((string=  lexeme "-")         'MINUS      )
+        ((string=  lexeme ".")         'PUNCT      )
+        ((string=  lexeme "/")         'FWDSLASH   )
+        ((string=  lexeme ":")         'COLON      )
+        ((string=  lexeme ";")         'SEMICOLON  )
+        ((string=  lexeme "=")         'EQUAL      )
+        ((string=  lexeme "" )	        'EOF        )
+        ((is-id    lexeme    )         'ID         )
+        ((is-number lexeme   )         'NUM        )
+        (t                             'UNKNOWN )
          )
     lexeme)
 )
@@ -193,17 +193,20 @@
 ;;=====================================================================
 
 (defun symtab-add (state id)
-;; *** TO BE DONE ***
+    (if (null (pstate-symtab state))
+        (setf (pstate-symtab state) (list id))
+        (setf (pstate-symtab state) (append (pstate-symtab state) (list id)))
+    )
 )
 
 (defun symtab-member (state id)
-;; *** TO BE DONE ***
+    (member id (pstate-symtab state) :test #'equal)
 )
-
+;; &rest - allows variable length parameter lists
 (defun symtab-display (state)
-   (format t "------------------------------------------------------~%")
-   (format t "Symbol Table is: ~S ~%" (pstate-symtab state))
-   (format t "------------------------------------------------------~%")
+   (format t "~%------------------------------------------------------")
+   (format t "~%Symbol Table is: ~S " (pstate-symtab state))
+   (format t "~%------------------------------------------------------")
 )
 
 ;;=====================================================================
@@ -211,37 +214,37 @@
 ;;=====================================================================
 
 (defun synerr1 (state symbol)
-    (format t "*** Syntax error:   Expected ~8S found ~8S ~%"
+    (format t "~%*** Syntax error:   Expected ~8S found ~8S "
            symbol (lexeme state))
     (setf (pstate-status state) 'NOTOK)
 )
 
 (defun synerr2 (state)
-    (format t "*** Syntax error:   Expected TYPE     found ~S ~%"
+    (format t "~%*** Syntax error:   Expected TYPE     found ~S "
            (lexeme state))
     (setf (pstate-status state) 'NOTOK)
 )
 
 (defun synerr3 (state)
-    (format t "*** Syntax error:   Expected OPERAND  found ~S ~%"
+    (format t "~%*** Syntax error:   Expected OPERAND  found ~S "
            (lexeme state))
     (setf (pstate-status state) 'NOTOK)
 )
 
 (defun semerr1 (state)
-    (format t "*** Semantic error: ~S already declared.~%"
+    (format t "~%*** Semantic error: ~S already declared."
                 (lexeme state))
     (setf (pstate-status state) 'NOTOK)
 )
 
 (defun semerr2 (state)
-    (format t "*** Semantic error: ~S not declared.~%"
+    (format t "~%*** Semantic error: ~S not declared."
           (lexeme state))
     (setf (pstate-status state) 'NOTOK)
 )
 
 (defun semerr3 (state)
-    (format t "*** Semantic error: found ~8S expected EOF.~%"
+    (format t "~%*** Semantic error: found ~8S expected EOF."
           (lexeme state))
     (setf (pstate-status state) 'NOTOK)
     ;; *** TO BE DONE - completed! ***
@@ -285,14 +288,89 @@
 ; <operand>       --> id | number
 ;;=====================================================================
 
-(defun operand (state))
-(defun factor (state))
-(defun term (state))
-(defun expr (state))
-(defun assign_stat (state))
-(defun stat (state))
-(defun stat-list (state))
-(defun stat-part (state))
+(defun operand (state)
+    ;;(format t "~% *** In operand")
+    (cond 
+        ((EQ (token state) 'ID) 
+            (progn 
+                (if (not(symtab-member state (lexeme state)))
+                    (semerr2 state)
+                )
+                (match state 'ID)
+            )
+        )
+        ((EQ (token state) 'NUM)
+            (match state 'NUM)
+        )
+        (t (synerr3 state))
+    )   
+)
+
+(defun factor (state)
+    ;;(format t "~% *** In factor")   
+    (if (EQ (lexeme state) 'LP)
+        (progn
+            (match state 'LP)
+            (expr state)
+            (match state 'RP))
+        (operand state)
+    )
+)
+
+(defun term (state)
+    ;;(format t "~% *** In term")
+    (factor state)
+    (if (EQ (token state) 'ASTERIX)
+        (progn
+            (match state 'ASTERIX)
+            (term state))
+    )
+)
+
+(defun expr (state)
+    ;;(format t "~% *** In expr")
+    (term state)
+    (if (EQ (token state) 'PLUS)
+        (progn
+            (match state 'PLUS)
+            (expr state))
+    )
+)
+
+(defun assign_stat (state)
+    ;;(format t "~% *** In assign_stat")
+    (if (EQ (lexeme state) 'ID)
+        (if (not(symtab-member state (lexeme state)))
+            (semerr2 state)
+        )
+    )
+    (match state 'ID)
+    (match state 'ASSIGN)
+    (expr state)
+)
+(defun stat (state)
+    ;;(format t "~% *** In stat")
+    (assign_stat state)
+)
+
+(defun stat-list (state)
+    ;;(format t "~% *** In stat-list")
+    (stat state)
+    (if (EQ (token state) 'SEMICOLON)
+        (progn 
+            (match state 'SEMICOLON)
+            (stat-list state)
+        )
+    )
+)
+
+(defun stat-part (state)
+     ;;(format t "~% *** In stat-part")
+     (match state 'BEGIN)
+     (stat-list state)
+     (match state 'END)
+     (match state 'PUNCT)
+)
 
 ;;=====================================================================
 ; <var-part>     --> var <var-dec-list>
@@ -303,24 +381,25 @@
 ;;=====================================================================
 
 (defun type (state)
-    (format t "~% *** In type")
+    ;;(format t "~% *** In type")
     (cond 
-        ((EQ (token state) 'INTEGER) (match state 'INTEGER))
-        ((EQ (token state) 'REAL) (match state 'REAL))
-        ((EQ (token state) 'BOOLEAN) (match state 'BOOLEAN))    
+        ((EQ (token state) 'INTEGER)    (match state 'INTEGER))
+        ((EQ (token state) 'REAL)       (match state 'REAL))
+        ((EQ (token state) 'BOOLEAN)    (match state 'BOOLEAN))
+        (t                              (synerr2 state))  
     )
 )
 
 (defun id-list (state)
-    (format t "~% *** In id-list")
-    ;(if (EQ (token state) 'ID)
-    ;    (progn 
-    ;        (if (not symtab-member state (lexeme state))
-    ;            (symtab-add state (lexeme state))
-    ;            (semerr1 state)
-    ;        )
-    ;    )
-    ;)
+    ;;(format t "~% *** In id-list")
+    (if (EQ (token state) 'ID)
+        (progn 
+            (if (symtab-member state (lexeme state))
+                (semerr1 state)
+                (symtab-add state (lexeme state))
+            )
+        )
+    )
     (match state 'ID)
     (if (EQ (token state) 'COMMA)
         (progn
@@ -331,7 +410,7 @@
 )
 
 (defun var-dec (state)
-    (format t "~% *** In var-dec")
+    ;;(format t "~% *** In var-dec")
     (id-list state)
     (match state 'COLON)
     (type state)
@@ -339,14 +418,14 @@
 )
 
 (defun var-dec-list (state)
-    (format t "~% *** In var-dec-list")
+    ;;(format t "~% *** In var-dec-list")
     (var-dec state)
     (if (EQ(token state) 'ID)
         (var-dec-list state))
 )
 
 (defun var-part (state)
-    (format t "~% *** In var-part")
+    ;;(format t "~% *** In var-part")
     (match state 'VAR)
     (var-dec-list state)
 )
@@ -356,12 +435,12 @@
 ;;=====================================================================
 
 (defun program-header (state)
-    (format t "~% *** In program-header")
+    ;;(format t "~% *** In program-header")
     (match state 'PROGRAM)
     
-    (if (EQ(token state) 'ID) 
-        (symtab-add state (second (pstate-lookahead state)))
-        (symtab-add state "???"))
+    ;;(if (EQ(token state) 'ID) 
+    ;;    (symtab-add state (lexeme state))
+    ;;    (symtab-add state "???"))
     
     (match state 'ID)
     (match state 'LP) 
@@ -386,7 +465,9 @@
 ;;=====================================================================
 
 (defun check-end (state)
-;; *** TO BE DONE ***
+    (if (not(EQ (token state)   'EOF))
+        (semerr3 state)
+    )
 )
 
 ;;=====================================================================
@@ -396,7 +477,7 @@
 (defun parse (filename)
    (format t "~%------------------------------------------------------")
    (format t "~%--- Parsing program: ~S " filename)
-   (format t "~%------------------------------------------------------~%")
+   (format t "~%------------------------------------------------------")
    (with-open-file (ip (open filename) :direction :input)
       (setf state (create-parser-state ip))
       (setf (pstate-nextchar state) (read-char ip nil 'EOF))
@@ -406,10 +487,10 @@
       (symtab-display state)
       )
    (if (eq (pstate-status state) 'OK)
-      (format t "Parse Successful. ~%")
-      (format t "Parse Fail. ~%")
+      (format t "~%Parse Successful. ")
+      (format t "~%Parse Fail. ")
       )
-   (format t "------------------------------------------------------~%")
+   (format t "~%------------------------------------------------------")
 )
 
 ;;=====================================================================
@@ -417,9 +498,8 @@
 ;;=====================================================================
 
 (defun parse-all ()
-
-;; *** TO BE DONE ***
-
+    (mapcar (lambda (concatenate (string) "/")))
+    (mapcar #'parse '("testfiles/sem1.pas" "testfiles/sem2.pas"))
 )
 
 ;;=====================================================================
@@ -433,10 +513,9 @@
 ; THE PARSER - test a single file
 ;;=====================================================================
 
-(parse "TestSuite/testok1.pas")
+;;(parse-all)
+(parse "testfiles/s.pas")
 
 ;;=====================================================================
 ; THE PARSER - end of code
 ;;=====================================================================
-
-
