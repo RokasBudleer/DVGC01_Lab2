@@ -1,3 +1,4 @@
+;;Oskar Deubler
 ;;=====================================================================
 ;; LISP READER & LEXER - new version 161202
 ;;=====================================================================
@@ -109,12 +110,12 @@
         ((string=  lexeme "+")         'PLUS       )
         ((string=  lexeme ",")         'COMMA      )
         ((string=  lexeme "-")         'MINUS      )
-        ((string=  lexeme ".")         'PUNCT      )
+        ((string=  lexeme ".")         'FSTOP      )
         ((string=  lexeme "/")         'FWDSLASH   )
         ((string=  lexeme ":")         'COLON      )
-        ((string=  lexeme ";")         'SEMICOLON  )
+        ((string=  lexeme ";")         'SCOLON     )
         ((string=  lexeme "=")         'EQUAL      )
-        ((string=  lexeme "" )	        'EOF        )
+        ((string=  lexeme "" )	       'EOF        )
         ((is-id    lexeme    )         'ID         )
         ((is-number lexeme   )         'NUM        )
         (t                             'UNKNOWN )
@@ -247,7 +248,6 @@
     (format t "~%*** Semantic error: found ~8S expected EOF."
           (lexeme state))
     (setf (pstate-status state) 'NOTOK)
-    ;; *** TO BE DONE - completed! ***
 )
 
 ;;=====================================================================
@@ -308,7 +308,7 @@
 
 (defun factor (state)
     ;;(format t "~% *** In factor")   
-    (if (EQ (lexeme state) 'LP)
+    (if (EQ (token state) 'LP)
         (progn
             (match state 'LP)
             (expr state)
@@ -339,7 +339,7 @@
 
 (defun assign_stat (state)
     ;;(format t "~% *** In assign_stat")
-    (if (EQ (lexeme state) 'ID)
+    (if (EQ (token state) 'ID)
         (if (not(symtab-member state (lexeme state)))
             (semerr2 state)
         )
@@ -356,9 +356,9 @@
 (defun stat-list (state)
     ;;(format t "~% *** In stat-list")
     (stat state)
-    (if (EQ (token state) 'SEMICOLON)
+    (if (EQ (token state) 'SCOLON)
         (progn 
-            (match state 'SEMICOLON)
+            (match state 'SCOLON)
             (stat-list state)
         )
     )
@@ -369,7 +369,7 @@
      (match state 'BEGIN)
      (stat-list state)
      (match state 'END)
-     (match state 'PUNCT)
+     (match state 'FSTOP)
 )
 
 ;;=====================================================================
@@ -414,7 +414,7 @@
     (id-list state)
     (match state 'COLON)
     (type state)
-    (match state 'SEMICOLON)
+    (match state 'SCOLON)
 )
 
 (defun var-dec-list (state)
@@ -448,7 +448,7 @@
     (match state 'COMMA) 
     (match state 'OUTPUT) 
     (match state 'RP) 
-    (match state 'SEMICOLON)
+    (match state 'SCOLON)
 )
 
 ;;=====================================================================
@@ -466,7 +466,11 @@
 
 (defun check-end (state)
     (if (not(EQ (token state)   'EOF))
-        (semerr3 state)
+        (progn 
+            (semerr3 state)
+            (get-token state)
+            (check-end state)
+        )
     )
 )
 
@@ -490,17 +494,27 @@
       (format t "~%Parse Successful. ")
       (format t "~%Parse Fail. ")
       )
-   (format t "~%------------------------------------------------------")
+   (format t "~%------------------------------------------------------~%")
 )
 
 ;;=====================================================================
 ; THE PARSER - parse all the test files
 ;;=====================================================================
-
-(defun parse-all ()
-    (mapcar (lambda (concatenate (string) "/")))
-    (mapcar #'parse '("testfiles/sem1.pas" "testfiles/sem2.pas"))
+(defun add_prefix_suffix (filenames)
+    (mapcar (lambda (filename) (concatenate 'string "testfiles/" filename ".pas")) filenames)
 )
+(defun parse-all ()
+
+    (setq  filenames '("testa" "testb" "testc" "testd" "teste" "testf" "testg" "testh" 
+    "testi" "testj" "testk" "testl" "testm" "testn" "testo"  "testp" "testq" "testr" "tests" "testt" "testu" "testv" 
+    "testw" "testx" "testy" "testz" 
+    "testok1" "testok2" "testok3" "testok4" 
+    "testok5" "testok6" "testok7" "fun1" "fun2" "fun3" "fun4" "fun5" "sem1" "sem2" "sem3" "sem4" "sem5"))
+    ;;"test1" "test2" "test3" "testok7" "testok11" "testaa" "notok"))
+    (setq pathed_files (add_prefix_suffix filenames))
+    (mapcar #'parse pathed_files)
+)
+
 
 ;;=====================================================================
 ; THE PARSER - test all files
@@ -513,8 +527,8 @@
 ; THE PARSER - test a single file
 ;;=====================================================================
 
-;;(parse-all)
-(parse "testfiles/s.pas")
+(parse-all)
+;;(parse "testfiles/testok6.pas")
 
 ;;=====================================================================
 ; THE PARSER - end of code
